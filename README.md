@@ -13,7 +13,7 @@ A small, fast window for managing Windows Task Scheduler tasks, made to be quick
 
 ## Download
 
-Get `Scheduled Tasks.exe` from the [latest release](../../releases/latest) and run it. No installer.
+Get the `.exe` from the [latest release](../../releases/latest) and run it. No installer.
 
 It needs the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (Windows will offer the download if it's missing). Works on Windows 10 and 11; the theme looks best on 11.
 
