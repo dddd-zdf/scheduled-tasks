@@ -2,11 +2,12 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml;
 
 namespace ScheduledTasks;
 
 // Talks to Windows Task Scheduler through its COM API (Schedule.Service).
-public static class TaskService
+public static partial class TaskService
 {
     static readonly Dictionary<uint, string> KnownResults = new()
     {
@@ -24,7 +25,6 @@ public static class TaskService
     static readonly string[] Days = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" };
     static readonly Regex ScriptArg = new(@"""([^""]+\.(?:ps1|pyw?|vbs|cmd|bat|js))""|(\S+\.(?:ps1|pyw?|vbs|cmd|bat|js))\b", RegexOptions.IgnoreCase);
     static readonly Regex ScriptExe = new(@"\.(?:ps1|cmd|bat|vbs)$", RegexOptions.IgnoreCase);
-    static readonly Regex Interval = new(@"^PT(?:(\d+)H)?(?:(\d+)M)?$");
 
     public static string BackupDir { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Scheduled Tasks Manager", "Deleted");
@@ -147,21 +147,24 @@ public static class TaskService
 
     static string FormatTrigger(dynamic tr)
     {
-        string at = "";
-        try { string start = tr.StartBoundary; if (!string.IsNullOrEmpty(start)) at = DateTime.Parse(start).ToString("h:mm tt"); } catch { }
+        string boundary = null;
+        try { boundary = tr.StartBoundary; } catch (COMException) { }
+        string at = DateTime.TryParse(boundary, out DateTime start) ? $" at {start:h:mm tt}" : "";
         string text;
         switch ((int)tr.Type)
         {
-            case 1: text = $"Once at {at}"; break;
+            case 1: text = at == "" ? "Once" : $"Once {start:MMM d, yyyy}{at}"; break;
             case 2:
                 int every = tr.DaysInterval;
-                text = every > 1 ? $"Every {every} days at {at}" : $"Daily at {at}";
+                text = (every > 1 ? $"Every {every} days" : "Daily") + at;
                 break;
             case 3:
                 int mask = tr.DaysOfWeek;
-                text = $"Weekly {string.Join(", ", Enumerable.Range(0, 7).Where(i => (mask & (1 << i)) != 0).Select(i => Days[i]))} at {at}";
+                int weeks = tr.WeeksInterval;
+                string cadence = weeks > 1 ? $"Every {weeks} weeks" : "Weekly";
+                text = $"{cadence} {string.Join(", ", Enumerable.Range(0, 7).Where(i => (mask & (1 << i)) != 0).Select(i => Days[i]))}{at}";
                 break;
-            case 4: case 5: text = $"Monthly at {at}"; break;
+            case 4: case 5: text = $"Monthly{at}"; break;
             case 6: text = "When idle"; break;
             case 7: text = "When created"; break;
             case 8: text = "At startup"; break;
@@ -173,12 +176,15 @@ public static class TaskService
         try
         {
             string rep = tr.Repetition.Interval;
-            Match m = rep == null ? Match.Empty : Interval.Match(rep);
-            if (m.Success && (m.Groups[1].Success || m.Groups[2].Success))
+            if (!string.IsNullOrEmpty(rep))
             {
-                string h = m.Groups[1].Value, min = m.Groups[2].Value;
-                string every = h == "" ? $"{min} min" : min == "" ? (h == "1" ? "hour" : $"{h} hours") : $"{h} h {min} min";
-                text += $", then every {every}";
+                TimeSpan interval = XmlConvert.ToTimeSpan(rep);
+                var parts = new List<string>();
+                if (interval.Days > 0) parts.Add($"{interval.Days} d");
+                if (interval.Hours > 0) parts.Add($"{interval.Hours} h");
+                if (interval.Minutes > 0) parts.Add($"{interval.Minutes} min");
+                if (interval.Seconds > 0) parts.Add($"{interval.Seconds} sec");
+                if (parts.Count > 0) text += $", then every {string.Join(" ", parts)}";
             }
         }
         catch { }

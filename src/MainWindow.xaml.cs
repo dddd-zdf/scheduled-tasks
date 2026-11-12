@@ -70,7 +70,7 @@ public partial class MainWindow : Window
     void UpdateDetails()
     {
         TaskRow t = Selected;
-        foreach (UIElement e in new UIElement[] { BRun, BStop, BToggle, BShow, BDelete, MRun, MStop, MToggle, MShow, MDelete }) e.IsEnabled = t != null;
+        foreach (UIElement e in new UIElement[] { BRun, BStop, BToggle, BSchedule, BShow, BDelete, MRun, MStop, MToggle, MSchedule, MShow, MDelete }) e.IsEnabled = t != null;
         if (t == null) { DName.Text = "Pick a task"; DDesc.Text = ""; DCmd.Text = ""; return; }
         DName.Text = t.Folder != "\\" ? $"{t.Name}   ({t.Folder})" : t.Name;
         DDesc.Text = t.Description;
@@ -86,13 +86,13 @@ public partial class MainWindow : Window
     bool Confirm(string text, string title) =>
         MessageBox.Show(this, text, title, MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes;
 
-    void ShowError(Exception ex)
-    {
-        string msg = ex.Message;
-        if (ex is UnauthorizedAccessException || (ex is COMException c && c.HResult == unchecked((int)0x80070005)))
-            msg = "Access denied. This task needs admin rights: click 'Restart as admin' and try again.";
-        MessageBox.Show(this, msg, "Scheduled Tasks", MessageBoxButton.OK, MessageBoxImage.Error);
-    }
+    static bool IsAccessDenied(Exception ex) =>
+        ex is UnauthorizedAccessException || (ex is COMException c && c.HResult == unchecked((int)0x80070005));
+
+    const string AdminMessage = "Access denied. This task may need admin rights. Click 'Restart as admin' and try again.";
+
+    void ShowError(Exception ex) => MessageBox.Show(this, IsAccessDenied(ex) ? AdminMessage : ex.Message,
+        "Scheduled Tasks", MessageBoxButton.OK, MessageBoxImage.Error);
 
     async Task Act(Action<TaskRow> action, string done, int settleMs = 0)
     {
@@ -115,6 +115,29 @@ public partial class MainWindow : Window
         if (t.StateKind == "off") await Act(r => TaskService.SetEnabled(r, true), "Turned on");
         else if (Confirm($"Turn off \"{t.Name}\"?\n\nIt won't run until you turn it back on.", "Turn off task"))
             await Act(r => TaskService.SetEnabled(r, false), "Turned off");
+    }
+
+    async void OnEditSchedule(object sender, RoutedEventArgs e)
+    {
+        TaskRow task = Selected;
+        if (task == null) return;
+
+        ScheduleSnapshot original;
+        try { original = TaskService.LoadSchedule(task); }
+        catch (Exception ex) { ShowError(ex); return; }
+
+        bool changed = false;
+        var editor = new ScheduleWindow(task.Name, original.Triggers, triggers =>
+        {
+            try { changed = TaskService.SaveSchedule(task, original, triggers); }
+            catch (Exception ex) when (IsAccessDenied(ex)) { throw new InvalidOperationException(AdminMessage, ex); }
+        }) { Owner = this };
+
+        if (editor.ShowDialog() == true && changed)
+        {
+            note = $"Updated schedule for {task.Name}";
+            await LoadRows();
+        }
     }
 
     void OnShow(object sender, RoutedEventArgs e)
@@ -145,6 +168,11 @@ public partial class MainWindow : Window
 
     void OnFilter(object sender, RoutedEventArgs e) { if (IsLoaded) ShowRows(); }
     void OnSelection(object sender, SelectionChangedEventArgs e) => UpdateDetails();
+    void OnTaskRightClick(object sender, MouseButtonEventArgs e)
+    {
+        if (ItemsControl.ContainerFromElement(TaskGrid, e.OriginalSource as DependencyObject) is DataGridRow row)
+            TaskGrid.SelectedItem = row.Item;
+    }
     async void OnRefresh(object sender, RoutedEventArgs e) { note = ""; await LoadRows(); }
 
     void OnBackups(object sender, RoutedEventArgs e)

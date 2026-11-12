@@ -52,7 +52,7 @@
               HeadersVisibility="Column" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
               RowHeight="34" CanUserResizeRows="False" Background="Transparent" RowBackground="Transparent"
               AlternatingRowBackground="Transparent" BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
-              SelectionChanged="OnSelection">
+              SelectionChanged="OnSelection" PreviewMouseRightButtonDown="OnTaskRightClick">
       <DataGrid.RowStyle>
         <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
           <Style.Triggers>
@@ -65,6 +65,7 @@
           <MenuItem x:Name="MRun" Header="Run now" Click="OnRun"/>
           <MenuItem x:Name="MStop" Header="Stop" Click="OnStop"/>
           <MenuItem x:Name="MToggle" Header="Turn off" Click="OnToggle"/>
+          <MenuItem x:Name="MSchedule" Header="Edit schedule..." Click="OnEditSchedule"/>
           <MenuItem x:Name="MShow" Header="Show file" Click="OnShow"/>
           <Separator/>
           <MenuItem x:Name="MDelete" Header="Delete..." Click="OnDelete"/>
@@ -125,6 +126,7 @@
           <Button x:Name="BRun" Content="Run now" Click="OnRun"/>
           <Button x:Name="BStop" Content="Stop" Click="OnStop"/>
           <Button x:Name="BToggle" Content="Turn off" Click="OnToggle"/>
+          <Button x:Name="BSchedule" Content="Edit schedule..." Click="OnEditSchedule"/>
           <Button x:Name="BShow" Content="Show file" Click="OnShow"/>
           <Button x:Name="BDelete" Content="Delete..." Click="OnDelete" Foreground="{DynamicResource SystemFillColorCriticalBrush}" Margin="18,0,0,0"/>
         </StackPanel>

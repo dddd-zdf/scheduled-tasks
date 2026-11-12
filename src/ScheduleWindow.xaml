@@ -1,0 +1,208 @@
+<Window x:Class="ScheduledTasks.ScheduleWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Edit schedule" Width="900" Height="650" MinWidth="800" MinHeight="500"
+        WindowStartupLocation="CenterOwner" FontSize="13" ShowInTaskbar="False">
+  <Window.Resources>
+    <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Margin" Value="0,0,6,0"/>
+      <Setter Property="MinWidth" Value="76"/>
+    </Style>
+    <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+      <Setter Property="MinHeight" Value="30"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+      <Setter Property="Margin" Value="0,2,10,2"/>
+    </Style>
+    <Style x:Key="FieldLabel" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="Margin" Value="0,0,12,0"/>
+    </Style>
+  </Window.Resources>
+
+  <Grid Margin="16">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <TextBlock x:Name="TaskTitle" Grid.Row="0" Margin="0,0,0,12" FontSize="18" FontWeight="SemiBold"
+               TextTrimming="CharacterEllipsis"/>
+
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="330"/>
+        <ColumnDefinition Width="16"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <Grid Grid.Column="0">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <DataGrid x:Name="TriggerGrid" Grid.Row="0" AutoGenerateColumns="False" IsReadOnly="True"
+                  SelectionMode="Single" HeadersVisibility="Column" RowHeight="34" CanUserSortColumns="False"
+                  CanUserResizeRows="False" GridLinesVisibility="Horizontal"
+                  HorizontalGridLinesBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                  Background="Transparent" AlternatingRowBackground="Transparent"
+                  BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                  SelectionChanged="OnTriggerSelectionChanged">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="Trigger" Binding="{Binding Summary}" Width="*">
+              <DataGridTextColumn.ElementStyle>
+                <Style TargetType="TextBlock">
+                  <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                  <Setter Property="ToolTip" Value="{Binding Summary}"/>
+                </Style>
+              </DataGridTextColumn.ElementStyle>
+            </DataGridTextColumn>
+            <DataGridTextColumn Header="State" Binding="{Binding EnabledLabel}" Width="54"/>
+          </DataGrid.Columns>
+        </DataGrid>
+        <WrapPanel Grid.Row="1" Margin="0,10,0,0">
+          <Button x:Name="AddButton" Content="Add trigger" Click="OnAdd"/>
+          <Button x:Name="RemoveButton" Content="Remove" Click="OnRemove"/>
+        </WrapPanel>
+      </Grid>
+
+      <Border Grid.Column="2" Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+              BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+              CornerRadius="8" Padding="18,16">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <TextBlock x:Name="EditorTitle" FontSize="16" FontWeight="SemiBold" Text="Select a trigger"/>
+
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,12,0,0">
+            <StackPanel>
+              <TextBlock x:Name="UnsupportedText" Text="Use Windows Task Scheduler to edit this trigger."
+                         Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"
+                         Visibility="Collapsed" Margin="0,0,0,8"/>
+              <StackPanel x:Name="FormPanel" Visibility="Collapsed">
+                <Grid Margin="0,0,0,10">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="118"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Grid.Column="0" Text="Trigger type" Style="{StaticResource FieldLabel}"/>
+                  <ComboBox x:Name="KindBox" Grid.Column="1" SelectionChanged="OnKindChanged" AutomationProperties.Name="Trigger type">
+                    <ComboBoxItem Content="One time"/>
+                    <ComboBoxItem Content="Daily"/>
+                    <ComboBoxItem Content="Weekly"/>
+                  </ComboBox>
+                </Grid>
+
+                <Grid Margin="0,0,0,10">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="118"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Grid.Column="0" Text="Start date" Style="{StaticResource FieldLabel}"/>
+                  <DatePicker x:Name="DateBox" Grid.Column="1" SelectedDateFormat="Short" AutomationProperties.Name="Start date"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,10">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="118"/>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Grid.Column="0" Text="Clock time" Style="{StaticResource FieldLabel}"/>
+                  <TextBox x:Name="TimeBox" Grid.Column="1" MaxLength="8" ToolTip="24-hour HH:mm or HH:mm:ss"
+                           AutomationProperties.Name="Clock time"/>
+                  <TextBlock x:Name="OffsetText" Grid.Column="2" VerticalAlignment="Center" Margin="10,0,0,0"
+                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                </Grid>
+
+                <CheckBox x:Name="EnabledBox" Content="Trigger is enabled" Margin="118,0,0,12"/>
+
+                <Grid x:Name="DailyPanel" Visibility="Collapsed" Margin="0,0,0,10">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="118"/>
+                    <ColumnDefinition Width="150"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Grid.Column="0" Text="Repeat every" Style="{StaticResource FieldLabel}"/>
+                  <TextBox x:Name="DailyIntervalBox" Grid.Column="1" MaxLength="3" AutomationProperties.Name="Days between runs"/>
+                  <TextBlock Grid.Column="2" Text="day(s)   (1–365)" VerticalAlignment="Center" Margin="10,0,0,0"
+                             Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                </Grid>
+
+                <StackPanel x:Name="WeeklyPanel" Visibility="Collapsed" Margin="0,0,0,10">
+                  <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="118"/>
+                      <ColumnDefinition Width="150"/>
+                      <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Repeat every" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="WeeklyIntervalBox" Grid.Column="1" MaxLength="2" AutomationProperties.Name="Weeks between runs"/>
+                    <TextBlock Grid.Column="2" Text="week(s)   (1–52)" VerticalAlignment="Center" Margin="10,0,0,0"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"/>
+                  </Grid>
+                  <Grid Margin="118,0,0,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <CheckBox x:Name="SundayBox" Grid.Row="0" Grid.Column="0" Content="Sun"/>
+                    <CheckBox x:Name="MondayBox" Grid.Row="0" Grid.Column="1" Content="Mon"/>
+                    <CheckBox x:Name="TuesdayBox" Grid.Row="0" Grid.Column="2" Content="Tue"/>
+                    <CheckBox x:Name="WednesdayBox" Grid.Row="0" Grid.Column="3" Content="Wed"/>
+                    <CheckBox x:Name="ThursdayBox" Grid.Row="1" Grid.Column="0" Content="Thu"/>
+                    <CheckBox x:Name="FridayBox" Grid.Row="1" Grid.Column="1" Content="Fri"/>
+                    <CheckBox x:Name="SaturdayBox" Grid.Row="1" Grid.Column="2" Content="Sat"/>
+                  </Grid>
+                </StackPanel>
+
+                <Separator Margin="0,2,0,12"/>
+                <TextBlock Text="Repetition (optional)" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <Grid Margin="0,0,0,8">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="118"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Grid.Column="0" Text="Repeat every" Style="{StaticResource FieldLabel}"/>
+                  <TextBox x:Name="RepeatIntervalBox" Grid.Column="1" ToolTip="hh:mm:ss, for example 00:15:00"
+                           AutomationProperties.Name="Repetition interval"/>
+                </Grid>
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="118"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Grid.Column="0" Text="Repeat for" Style="{StaticResource FieldLabel}"/>
+                  <TextBox x:Name="RepeatDurationBox" Grid.Column="1" ToolTip="hh:mm:ss or d.hh:mm:ss. Leave blank to repeat indefinitely."
+                           AutomationProperties.Name="Repetition duration"/>
+                </Grid>
+                <TextBlock Text="Use hh:mm:ss or d.hh:mm:ss. Leave duration blank to repeat indefinitely."
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" Margin="118,5,0,0"/>
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+
+          <TextBlock x:Name="ErrorText" Grid.Row="2" Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                     TextWrapping="Wrap" Margin="0,10,0,0" Visibility="Collapsed"/>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+      <Button Content="Cancel" IsCancel="True"/>
+      <Button x:Name="SaveButton" Content="Save" Click="OnSave" IsDefault="True" Margin="0"/>
+    </StackPanel>
+  </Grid>
+</Window>

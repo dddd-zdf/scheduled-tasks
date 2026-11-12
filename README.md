@@ -3,7 +3,8 @@
 A small, fast window for managing Windows Task Scheduler tasks, made to be quicker to use than the built-in Task Scheduler console.
 
 - See every task with its schedule in plain words ("Weekly Fri at 7:00 AM"), when it last ran, whether that worked, and when it runs next.
-- **Run now**, **Stop**, **Turn on/off**, **Show file** (opens the script or program in Explorer) and **Delete**, from buttons or a right-click.
+- **Run now**, **Stop**, **Turn on/off**, **Edit schedule**, **Show file** (opens the script or program in Explorer) and **Delete**, from buttons or a right-click.
+- **Edit schedule** adds, changes, or removes one-time, daily, and weekly triggers, including repeat intervals. Other trigger types are read-only in the app. Use Windows Task Scheduler for tasks that require the run-as account password.
 - Three views: **My scripts** (tasks that run a .ps1, .py, .vbs, .cmd... file), **All apps** (everything outside Windows' own folder) and **Windows** (the built-in tasks).
 - Filter box and an **Only problems** switch that shows tasks whose last run failed.
 - Delete saves a backup of the task first, in `%LOCALAPPDATA%\Scheduled Tasks Manager\Deleted`. To restore one:
