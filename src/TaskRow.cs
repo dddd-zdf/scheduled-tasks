@@ -7,7 +7,7 @@ public class TaskRow
     public string Name { get; set; }
     public string State { get; set; }       // On / Off / Running / Queued
     public string StateKind { get; set; }   // on / off / run
-    public bool Mine { get; set; }
+    public bool RunsScript { get; set; }
     public string Schedule { get; set; }
     public string Command { get; set; }
     public string File { get; set; }
@@ -19,5 +19,5 @@ public class TaskRow
     public string Result { get; set; }
     public string ResultKind { get; set; }  // ok / run / never / bad
     public bool Problem { get; set; }
-    public string Key => Folder + "\\" + Name;
+    public string Key => Folder.TrimEnd('\\') + "\\" + Name;
 }

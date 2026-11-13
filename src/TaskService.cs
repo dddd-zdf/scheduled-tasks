@@ -39,19 +39,43 @@ public static partial class TaskService
     static bool IsWindowsFolder(string path) =>
         path.Equals(@"\Microsoft", StringComparison.OrdinalIgnoreCase) || path.StartsWith(@"\Microsoft\", StringComparison.OrdinalIgnoreCase);
 
-    // scope: "mine" (tasks that run a script: .ps1, .py, .vbs, .cmd, ...), "apps" (everything outside \Microsoft), "windows" (\Microsoft only).
+    // scope: "apps" (outside \Microsoft), "windows" (\Microsoft only), or "all".
     public static List<TaskRow> Load(string scope)
     {
         var rows = new List<TaskRow>();
         Walk(Connect().GetFolder("\\"), scope, rows);
-        return rows.OrderBy(r => !r.Mine).ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        return SortRows(rows);
     }
+
+    public static List<TaskRow> LoadWatched(IEnumerable<string> paths)
+    {
+        var rows = new List<TaskRow>();
+        dynamic root = Connect().GetFolder("\\");
+        foreach (string path in paths)
+        {
+            try
+            {
+                dynamic task = root.GetTask(path);
+                rows.Add(Build(task, path[..Math.Max(1, path.LastIndexOf('\\'))]));
+            }
+            catch (COMException ex) when (ex.HResult is unchecked((int)0x80070002) // file not found
+                or unchecked((int)0x80070003) // path not found
+                or unchecked((int)0x80070005)) // access denied
+            {
+                // Keep the saved path so the task can reappear when it is available.
+            }
+        }
+        return SortRows(rows);
+    }
+
+    static List<TaskRow> SortRows(List<TaskRow> rows) =>
+        rows.OrderBy(r => !r.RunsScript).ThenBy(r => r.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
     static void Walk(dynamic folder, string scope, List<TaskRow> rows)
     {
         string path = folder.Path;
         bool windows = IsWindowsFolder(path);
-        if (scope == "windows" ? windows : !windows)
+        if (scope == "all" || (scope == "windows" ? windows : !windows))
         {
             dynamic tasks = folder.GetTasks(1);  // 1 = include hidden tasks
             for (int i = 1; i <= tasks.Count; i++)
@@ -59,14 +83,14 @@ public static partial class TaskService
                 TaskRow row;
                 try { row = Build(tasks.Item(i), path); }
                 catch (COMException) { continue; }  // deleted while we were reading the list
-                if (scope != "mine" || row.Mine) rows.Add(row);
+                rows.Add(row);
             }
         }
         dynamic subs = folder.GetFolders(0);
         for (int i = 1; i <= subs.Count; i++)
         {
             dynamic sub = subs.Item(i);
-            if (scope == "windows" || !IsWindowsFolder((string)sub.Path)) Walk(sub, scope, rows);
+            if (scope != "apps" || !IsWindowsFolder((string)sub.Path)) Walk(sub, scope, rows);
         }
     }
 
@@ -104,7 +128,7 @@ public static partial class TaskService
             if (m.Success) { r.File = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value; script = true; }
             else { r.File = exe; script = ScriptExe.IsMatch(exe); }
         }
-        r.Mine = script;
+        r.RunsScript = script;
 
         switch ((int)t.State)
         {
